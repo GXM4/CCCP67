@@ -68,13 +68,13 @@ wf_set_key(key = cds_key)   # stores the token in your system keyring
 
 # CDS variable name = CMIP6 short name inside the NetCDF files
 variables <- c(
-  precipitation                                       = "pr",         # kg m-2 s-1
-  total_runoff                                        = "mrro",       # kg m-2 s-1
-  #  evaporation_including_sublimation_and_transpiration = "evspsbl",
-  #  moisture_in_upper_portion_of_soil_column            = "mrsos",   # kg m-2
-  #  surface_snow_amount                                 = "snw",     # kg m-2 (SWE)
-  #  snowfall_flux                                       = "prsn",    # kg m-2 s-1
-  near_surface_air_temperature                        = "tas"         # K
+  precipitation                                       = "pr",      # kg m-2 s-1
+  total_runoff                                        = "mrro",    # kg m-2 s-1
+  evaporation_including_sublimation_and_transpiration = "evspsbl",
+  moisture_in_upper_portion_of_soil_column            = "mrsos",   # kg m-2
+  surface_snow_amount                                 = "snw",     # kg m-2 (SWE)
+  snowfall_flux                                       = "prsn",    # kg m-2 s-1
+  near_surface_air_temperature                        = "tas"      # K
 )
 
 # Not every model provides every variable/scenario; failures are logged.
@@ -178,12 +178,25 @@ download_all <- function() {
           c1   <- min(c0 + years_per_request - 1, yrs[2])
           tag  <- sprintf("%s_%s_%s_%s_%d-%d", short, temporal_resolution,
                           exp, model, c0, c1)
-          zip_path  <- file.path(raw_dir, paste0(tag, ".zip"))
-          part_name <- paste0(tag, ".zip.part")            # download in progress
-          part_path <- file.path(raw_dir, part_name)
+          zip_name  <- paste0(tag, ".zip")
+          zip_path  <- file.path(raw_dir, zip_name)
+          # downloads land in a separate "_incomplete" folder first and are
+          # moved into raw_zip only once complete and checked
+          part_dir  <- file.path(raw_dir, "_incomplete")
+          part_path <- file.path(part_dir, zip_name)
           dest      <- nc_folder(model, exp, short)
           
           if (file.exists(part_path)) file.remove(part_path)   # leftover from a crash
+          
+          # rescue files saved as "<name>.zip.zip" by the previous version
+          for (old in file.path(raw_dir, paste0(tag, c(".zip.zip", ".zip.part")))) {
+            if (!file.exists(zip_path) && file.exists(old) && zip_ok(old)) {
+              file.rename(old, zip_path)
+              message("Recovered earlier download: ", zip_name)
+            } else if (file.exists(old)) {
+              file.remove(old)
+            }
+          }
           
           # --- already downloaded? -----------------------------------
           if (file.exists(zip_path)) {
@@ -199,11 +212,12 @@ download_all <- function() {
           # --- request it (with retries) -----------------------------
           for (attempt in seq_len(max_tries)) {
             message(sprintf("Requesting %s (attempt %d/%d) ...", tag, attempt, max_tries))
+            dir.create(part_dir, showWarnings = FALSE)
             err <- tryCatch({
               wf_request(
-                request  = build_request(cds_var, exp, model, c0, c1, part_name),
+                request  = build_request(cds_var, exp, model, c0, c1, zip_name),
                 transfer = TRUE,
-                path     = raw_dir,
+                path     = part_dir,
                 time_out = 3 * 3600
               )
               if (!zip_ok(part_path)) stop("downloaded file is not a valid zip")
@@ -335,7 +349,7 @@ load_stations <- function() {
     dir.create(dirname(stations_csv), recursive = TRUE, showWarnings = FALSE)
     # EXAMPLE coordinates only - replace with your gauge/met stations
     write.csv(data.frame(
-      name = c("Tashkent", "Charvak", "Pskem", "Chatkal"),
+      name = c("Tashkent", "Charvak_area", "Pskem_valley", "Chatkal_valley"),
       lat  = c(41.33, 41.62, 41.90, 41.80),
       lon  = c(69.30, 70.05, 70.35, 70.60)
     ), stations_csv, row.names = FALSE)
