@@ -160,16 +160,13 @@ def build_request(cds_var, experiment, model, y0, y1):
         req["day"] = [f"{d:02d}" for d in range(1, 32)]
     return req
 
-
 def nc_folder(model, experiment, short):
     # monthly and daily files go to separate folders so they are never mixed
     return NC_DIR / TEMPORAL_RESOLUTION / model / experiment / short
 
-
 def model_tag():
     """Model names joined, used in output file names (e.g. 'miroc6')."""
     return "_".join(MODELS)
-
 
 def zip_ok(path):
     """True if the file is a complete, readable zip containing NetCDF."""
@@ -178,7 +175,6 @@ def zip_ok(path):
             return zf.testzip() is None and any(n.endswith(".nc") for n in zf.namelist())
     except (zipfile.BadZipFile, OSError):
         return False
-
 
 def unzip_nc(zip_path, dest):
     """Extract NetCDF files, skipping ones already extracted completely."""
@@ -193,9 +189,7 @@ def unzip_nc(zip_path, dest):
             with zf.open(info) as src, open(out, "wb") as dst:
                 dst.write(src.read())
 
-
 FATAL_WORDS = ("licence", "license", "401", "403", "unauthorized", "forbidden")
-
 
 def download_all():
     import cdsapi
@@ -213,7 +207,7 @@ def download_all():
                 for c0 in range(y0, y1 + 1, YEARS_PER_REQUEST):
                     c1 = min(c0 + YEARS_PER_REQUEST - 1, y1)
                     tag = f"{short}_{TEMPORAL_RESOLUTION}_{exp}_{model}_{c0}-{c1}"
-                                        target = RAW_DIR / f"{tag}.zip"
+                    target = RAW_DIR / f"{tag}.zip"
                     # downloads land in a separate "_incomplete" folder first and
                     # are moved into raw_zip only once complete and checked
                     part_dir = RAW_DIR / "_incomplete"
@@ -230,9 +224,6 @@ def download_all():
                             else:
                                 old.unlink()
 
-                    if part.exists():
-                        part.unlink()                     # leftover from a crash
-
                     # --- already downloaded? -------------------------------
                     if target.exists():
                         if zip_ok(target):
@@ -245,6 +236,7 @@ def download_all():
                     # --- request it (with retries) -------------------------
                     for attempt in range(1, MAX_TRIES + 1):
                         print(f"Requesting {tag} (attempt {attempt}/{MAX_TRIES}) ...")
+                        part_dir.mkdir(parents=True, exist_ok=True)
                         try:
                             client.retrieve("projections-cmip6",
                                             build_request(cds_var, exp, model, c0, c1),
@@ -280,7 +272,6 @@ def download_all():
     elif f.exists():
         f.unlink()                                        # old list is out of date
 
-
 # =====================================================================
 # 2. READ + PREPARE
 # =====================================================================
@@ -300,7 +291,6 @@ def load_variable(model, experiment, short):
         da = da.sortby("lat")
     return da.load()
 
-
 def convert_units(da, short):
     if not CONVERT_UNITS:
         return da
@@ -316,7 +306,6 @@ def convert_units(da, short):
         attrs["units"] = "mm"
     da.attrs = attrs
     return da
-
 
 def time_strings(da):
     # monthly data -> "YYYY-MM" so all variables line up on the same rows.
@@ -353,7 +342,6 @@ def basin_weights(da):
         return w
     return w * frac
 
-
 def spatial_outputs(da, short, model, exp):
     SPATIAL_DIR.mkdir(parents=True, exist_ok=True)
     stem = f"{short}_{TEMPORAL_RESOLUTION}_{model}_{exp}"
@@ -389,7 +377,6 @@ def load_stations():
         }).to_csv(path, index=False)
         print(f"Created example {path} - edit it with your own stations.")
     return pd.read_csv(path)
-
 
 def point_outputs(da, short, model, exp, stations):
     lons = stations["lon"].to_numpy(dtype=float)
@@ -430,7 +417,6 @@ def point_outputs(da, short, model, exp, stations):
 def safe_name(name):
     """Station name usable as a Windows folder/file name."""
     return "".join(c if (c.isalnum() or c in "_-") else "_" for c in str(name))
-
 
 def process_all():
     OUT.mkdir(parents=True, exist_ok=True)
@@ -506,7 +492,6 @@ def process_all():
                  index=False)
 
     print(f"Done. Outputs in {OUT.resolve()}")
-
 
 if __name__ == "__main__":
     download_all()
