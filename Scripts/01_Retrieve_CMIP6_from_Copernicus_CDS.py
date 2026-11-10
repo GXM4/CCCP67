@@ -57,7 +57,7 @@ import xarray as xr
 # (use forward slashes "/" on Windows, or prefix the string with r"...")
 # =====================================================================
 
-PROJECT_DIR = Path("C:/Users/jt231697/Downloads/CMIP6/Data")
+PROJECT_DIR = Path("C:/Users/jt2316/CMIP6/Data")
 
 # ---- inputs ----
 INPUT_DIR    = PROJECT_DIR / "Input"
