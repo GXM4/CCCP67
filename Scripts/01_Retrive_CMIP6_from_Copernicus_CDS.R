@@ -30,7 +30,7 @@ library(ncdf4)
 # (use forward slashes "/" on Windows)
 # =====================================================================
 
-project_dir <- "C:/Users/jt231697/Downloads/CMIP6_R"
+project_dir <- "C:/Users/jt2316/CMIP6_R"
 
 # ---- inputs ----
 input_dir    <- file.path(project_dir, "Input")
