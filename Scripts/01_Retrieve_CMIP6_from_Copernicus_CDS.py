@@ -213,8 +213,22 @@ def download_all():
                 for c0 in range(y0, y1 + 1, YEARS_PER_REQUEST):
                     c1 = min(c0 + YEARS_PER_REQUEST - 1, y1)
                     tag = f"{short}_{TEMPORAL_RESOLUTION}_{exp}_{model}_{c0}-{c1}"
-                    target = RAW_DIR / f"{tag}.zip"
-                    part = RAW_DIR / f"{tag}.zip.part"   # download in progress
+                                        target = RAW_DIR / f"{tag}.zip"
+                    # downloads land in a separate "_incomplete" folder first and
+                    # are moved into raw_zip only once complete and checked
+                    part_dir = RAW_DIR / "_incomplete"
+                    part = part_dir / f"{tag}.zip"
+
+                    if part.exists():
+                        part.unlink()                     # leftover from a crash
+                    # rescue/clean files left by earlier versions of this script
+                    for old in (RAW_DIR / f"{tag}.zip.part", RAW_DIR / f"{tag}.zip.zip"):
+                        if old.exists():
+                            if not target.exists() and zip_ok(old):
+                                old.replace(target)
+                                print(f"Recovered earlier download: {target.name}")
+                            else:
+                                old.unlink()
 
                     if part.exists():
                         part.unlink()                     # leftover from a crash
